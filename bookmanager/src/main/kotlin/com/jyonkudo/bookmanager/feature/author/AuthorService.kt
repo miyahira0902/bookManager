@@ -8,18 +8,18 @@ import org.jooq.DSLContext
 import org.springframework.stereotype.Service
 
 @Service
-class AuthorService(private val create: DSLContext) {
+class AuthorService(private val dslContext: DSLContext) {
 
     fun register(request: AuthorRegisterRequest) {
-        val record: AuthorRecord = create.newRecord(AUTHOR)
+        val record: AuthorRecord = dslContext.newRecord(AUTHOR)
         record.name = request.name
         record.birthDate = request.birthDate
         record.store()
     }
 
     fun update(request: AuthorUpdateRequest) {
-        val mayNullRecord: AuthorRecord? = create.fetchOne(AUTHOR, AUTHOR.ID.eq(request.id))
-        val record = mayNullRecord ?: throw IllegalArgumentException("Record not found")
+        val mayNullRecord: AuthorRecord? = dslContext.fetchOne(AUTHOR, AUTHOR.ID.eq(request.id))
+        val record = mayNullRecord ?: throw IllegalArgumentException("Author not found")
 
         record.name = request.name
         record.birthDate = request.birthDate
