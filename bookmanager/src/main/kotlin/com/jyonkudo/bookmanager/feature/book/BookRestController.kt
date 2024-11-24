@@ -1,8 +1,11 @@
 package com.jyonkudo.bookmanager.feature.book
 
 import com.jyonkudo.bookmanager.feature.book.dto.BookRegisterRequest
+import com.jyonkudo.bookmanager.feature.book.dto.BookSearchRequest
+import com.jyonkudo.bookmanager.feature.book.dto.BookSearchResponse
 import com.jyonkudo.bookmanager.feature.book.dto.BookUpdateRequest
 import jakarta.validation.Valid
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -22,5 +25,11 @@ class BookRestController(private val service: BookService) {
         }
 
         service.update(request)
+    }
+
+    @GetMapping
+    fun search(request: BookSearchRequest): ResponseEntity<List<BookSearchResponse>> {
+        val books: List<BookSearchResponse> = service.searchByAuthorId(request.authorId)
+        return ResponseEntity.ok(books)
     }
 }

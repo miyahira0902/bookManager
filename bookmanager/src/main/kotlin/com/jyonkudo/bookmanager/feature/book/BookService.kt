@@ -1,8 +1,9 @@
 package com.jyonkudo.bookmanager.feature.book
 
-import com.jyonkudo.bookmanager.feature.book.dto.BookRegisterRequest
-import com.jyonkudo.bookmanager.feature.book.dto.BookUpdateRequest
+import com.jyonkudo.bookmanager.feature.author.dto.AuthorDto
+import com.jyonkudo.bookmanager.feature.book.dto.*
 import com.jyonkudo.bookmanager.jooq.genarated.enums.BookPublicationStatus
+import com.jyonkudo.bookmanager.jooq.genarated.tables.Author.AUTHOR
 import com.jyonkudo.bookmanager.jooq.genarated.tables.Book.BOOK
 import com.jyonkudo.bookmanager.jooq.genarated.tables.BookAuthor.BOOK_AUTHOR
 import com.jyonkudo.bookmanager.jooq.genarated.tables.records.BookAuthorRecord
@@ -66,6 +67,55 @@ class BookService(private val dslContext: DSLContext) {
         return bookRecord.publicationStatus == BookPublicationStatus.PUBLISHED &&
                 request.publicationStatus == BookPublicationStatus.NOT_PUBLISHED
 
+    }
+
+    fun searchByAuthorId(authorId: Int): List<BookSearchResponse> {
+
+        // 著者に紐づく書籍を取得
+        val bookList = dslContext.select(BOOK)
+            .from(BOOK)
+            .join(BOOK_AUTHOR).on(BOOK.ID.eq(BOOK_AUTHOR.BOOK_ID))
+            .join(AUTHOR).on(AUTHOR.ID.eq(BOOK_AUTHOR.AUTHOR_ID))
+            .where(AUTHOR.ID.eq(authorId))
+            .fetchArray()
+
+        // 各書籍の著者を取得
+        val authorList = dslContext.select(BOOK_AUTHOR.`as`("ba1").BOOK_ID, AUTHOR.ID, AUTHOR.NAME, AUTHOR.BIRTH_DATE)
+            .from(BOOK_AUTHOR.`as`("ba1"))
+            .join(BOOK_AUTHOR.`as`("ba2"))
+            .on(BOOK_AUTHOR.`as`("ba1").BOOK_ID.eq(BOOK_AUTHOR.`as`("ba2").BOOK_ID))
+            .join(AUTHOR)
+            .on(BOOK_AUTHOR.`as`("ba2").AUTHOR_ID.eq(AUTHOR.ID))
+            .where(BOOK_AUTHOR.`as`("ba1").AUTHOR_ID.eq(1))
+            .fetchArray();
+
+        // 書籍と著者リストをマッピング
+        val bookSearchResponseList = bookList.map { wrappedBookRecord ->
+            val bookRecord = wrappedBookRecord.component1()
+
+            // 該当書籍の著者リストを抽出
+            val authorsOfBook = authorList.filter { authorRecord ->
+                authorRecord[BOOK_AUTHOR.BOOK_ID] == bookRecord[BOOK.ID]
+            }.map { authorRecord ->
+                AuthorDto(
+                    id = authorRecord[AUTHOR.ID],
+                    name = authorRecord[AUTHOR.NAME],
+                    birthDate = authorRecord[AUTHOR.BIRTH_DATE]
+                )
+            }
+
+            BookSearchResponse(
+                book = BookDto(
+                    id = bookRecord[BOOK.ID],
+                    title = bookRecord[BOOK.TITLE],
+                    price = bookRecord[BOOK.PRICE],
+                    publicationStatus = bookRecord[BOOK.PUBLICATION_STATUS]
+                ),
+                authorList = authorsOfBook
+            )
+        }
+
+        return bookSearchResponseList
     }
 
 
